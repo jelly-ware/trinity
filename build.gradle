@@ -1,0 +1,77 @@
+plugins {
+    id 'java-library'
+	id 'maven-publish'
+}
+
+sourceCompatibility=project.javaVersion
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'git-hub-packages-beef'
+        url = 'https://maven.pkg.github.com/jelly-ware/beef'
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
+        }
+    }
+    maven {
+        name = 'git-hub-packages-toolkit'
+        url = 'https://maven.pkg.github.com/jelly-ware/toolkit'
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+	// shared versions
+    def junitVersion = '5.6.0'
+    def lombok = '1.18.12'
+
+    compileOnly "org.projectlombok:lombok:${lombok}"
+    annotationProcessor "org.projectlombok:lombok:${lombok}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation 'org.assertj:assertj-core:3.15.0'
+
+    compileOnly 'jakarta.platform:jakarta.jakartaee-api:8.0.0'
+
+    implementation 'org.jellyware.beef:beef:1.0.0-alpha'
+
+    implementation 'org.jellyware.toolkit:toolkit:1.0.0-alpha'
+}
+
+test {
+    useJUnitPlatform {
+        // includeTags 'fast', 'smoke & feature-a'
+        // excludeTags 'slow', 'ci'
+        includeEngines 'junit-jupiter'
+        excludeEngines 'junit-vintage'
+    }
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = 'https://maven.pkg.github.com/jelly-ware/trinity'
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}

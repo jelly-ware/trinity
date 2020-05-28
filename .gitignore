@@ -1,0 +1,15 @@
+# ignore system files
+**/.*
+# ignore everything in the root
+/*
+# un-ignore files in root
+!/src/
+!/.github/
+!/README.md
+!/.gitignore
+!/settings.gradle
+!/COPYING
+!/gradle*
+!/build.gradle
+!/gradle.properties
+
