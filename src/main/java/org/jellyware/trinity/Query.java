@@ -131,12 +131,11 @@ public class Query {
 								if (formula != null)
 									return formula.value().equals(field.getName());
 								return false;
-							}).findFirst().orElseThrow(
-									() -> Beef.of(TrinityException.class)
-											.as(b -> b.when("Parsing expression")
-													.detail("Couldn't find suitable " + expression + " method."))
-											.build());
-			return Pair.with(field, Reflect.<Object, Expression<U>>method(m).execute(null, cb, rt, c));
+							}).findFirst();
+			if (m.isPresent())
+				return Pair.with(field, Reflect.<Object, Expression<U>>method(m.get()).execute(null, cb, rt, c));
+			else
+				return Pair.with(field, (Expression<U>) cb.nullLiteral(field.getType()));
 		}
 		// return Pair.with(field, Reflect.<Object,
 		// Expression<U>>method(m).execute(null, cb,
