@@ -128,7 +128,7 @@ public class Query {
 	 */
 	public static <T extends Entity.Persistence<? extends Serializable>, U> Pair<Class<?>, Expression<U>> parseX(
 			Class<T> cls, String expression, CriteriaBuilder cb, Root<T> rt, CommonAbstractCriteria c) {
-		var tokens = expression.split(".");
+		var tokens = expression.split("\\.");
 		// resolve nested field
 		Field field = null;
 		for (var token : tokens) {

@@ -9,7 +9,6 @@ import java.time.format.DateTimeFormatter;
  */
 public class App {
 	public static void main(String[] args) {
-		System.out.println(LocalDate.now()
-				.format(DateTimeFormatter.ofPattern("dd-MMM-uuuu")));
+		System.out.println("id".split("\\.")[0]);
 	}
 }
