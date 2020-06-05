@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,8 +25,10 @@ import javax.persistence.criteria.CommonAbstractCriteria;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.From;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Selection;
@@ -111,17 +114,46 @@ public class Query {
 		};
 	}
 
-	public static <T extends Entity.Persistence<? extends Serializable>, U> Pair<Field, Expression<U>> parse(
+	/**
+	 * Parse X
+	 * 
+	 * @param <T>
+	 * @param <U>
+	 * @param cls
+	 * @param expression
+	 * @param cb
+	 * @param rt
+	 * @param c
+	 * @return
+	 */
+	public static <T extends Entity.Persistence<? extends Serializable>, U> Pair<Class<?>, Expression<U>> parseX(
 			Class<T> cls, String expression, CriteriaBuilder cb, Root<T> rt, CommonAbstractCriteria c) {
-		var field = getAllFields(cls, withModifier(Modifier.FINAL).negate(), withModifier(Modifier.STATIC).negate(),
-				withTypeAssignableTo(Collection.class).and(withAnnotation(OneToMany.class)).negate(),
-				// withTypeAssignableTo(Map.class).negate(),
-				withName(expression))
-						.stream().findAny()
-						.orElseThrow(() -> Beef.of(TrinityException.class).as(
-								b -> b.when("Parsing expression").detail("Couldn't find suitable field: " + expression))
-								.build());
+		var tokens = expression.split(".");
+		// resolve nested field
+		Field field = null;
+		for (var token : tokens) {
+			field = getAllFields(field == null ? cls : field.getType(), withModifier(Modifier.FINAL).negate(),
+					withModifier(Modifier.STATIC).negate(),
+					withTypeAssignableTo(Collection.class).and(withAnnotation(OneToMany.class)).negate(),
+					// withTypeAssignableTo(Map.class).negate(),
+					withName(token))
+							.stream().findAny()
+							.orElseThrow(() -> Beef.of(TrinityException.class).as(
+									b -> b.when("Parsing expression").detail("Couldn't find suitable field: " + token))
+									.build());
+		}
+
+		// pair
+		var value0 = field.getType();
+		if (Entity.Persistence.class.isAssignableFrom(value0))
+			try {
+				value0 = field.getType().getField("id").getType();
+			} catch (Exception e) {
+				throw Beef.uncheck(e);
+			}
+		// transient
 		var t = field.getAnnotation(Transient.class);
+		var hmm = field.getName();
 		if (t != null || Modifier.isTransient(field.getModifiers())) {
 			var m = getAllMethods(cls, withAnnotation(Entity.Persistence.Formula.class),
 					withReturnTypeAssignableTo(Selection.class),
@@ -129,18 +161,25 @@ public class Query {
 							.stream().filter(method -> {
 								var formula = method.getDeclaredAnnotation(Entity.Persistence.Formula.class);
 								if (formula != null)
-									return formula.value().equals(field.getName());
+									return formula.value().equals(hmm);
 								return false;
 							}).findFirst();
-			if (m.isPresent())
-				return Pair.with(field, Reflect.<Object, Expression<U>>method(m.get()).execute(null, cb, rt, c));
-			else
-				return Pair.with(field, (Expression<U>) cb.nullLiteral(field.getType()));
+			// if (m.isPresent())
+			// return Pair.with(field, Reflect.<Object,
+			// Expression<U>>method(m.get()).execute(null, cb, rt, c));
+			// else
+			// return Pair.with(field, (Expression<U>) cb.nullLiteral(field.getType()));
+			return Pair.with(value0, (Expression<U>) cb.nullLiteral(value0));
 		}
-		// return Pair.with(field, Reflect.<Object,
-		// Expression<U>>method(m).execute(null, cb,
-		// rt.join(field.getName(), JoinType.LEFT), c));
-		return Pair.with(field, rt.get(field.getName()));
+		// non-transient
+		Path<?> value1 = null;
+		for (int i = 0; i < tokens.length; i++) {
+			if (i == tokens.length - 1)
+				value1 = value1 == null ? rt.get(tokens[i]) : value1.get(tokens[i]);
+			else
+				value1 = value1 == null ? rt.join(tokens[i]) : ((Root<?>) value1).join(tokens[i]);
+		}
+		return Pair.with(value0, (Expression<U>) value1);
 	}
 
 	public static Object parse(JsonValue value, Class<?> cls) {
@@ -169,17 +208,17 @@ public class Query {
 			Query.Parameters.Predicate serial, CriteriaBuilder cb, Root<T> rt, CommonAbstractCriteria c) {
 		Predicate predicate;
 		// find x
-		Pair<Field, ? extends Expression<?>> x;
+		Pair<Class<?>, ? extends Expression<?>> x;
 		switch (serial.type) {
 			case EQUAL:
-				x = Query.parse(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
-				predicate = cb.equal(x.getValue1(), parse(serial.getParams().get(Y), x.getValue0().getType()));
+				x = Query.parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
+				predicate = cb.equal(x.getValue1(), parse(serial.getParams().get(Y), x.getValue0()));
 				break;
 			case LIKE:
-				x = Query.parse(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
-				if (Enum.class.isAssignableFrom(x.getValue0().getType())) {
+				x = Query.parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
+				if (Enum.class.isAssignableFrom(x.getValue0())) {
 					@SuppressWarnings("unchecked")
-					var arr = Stream.of(Enumeration.values((Class<? extends Enum>) x.getValue0().getType()))
+					var arr = Stream.of(Enumeration.values((Class<? extends Enum>) x.getValue0()))
 							.filter(e -> e.toString().toUpperCase()
 									.contains((serial.getParams().get(Y).getValueType() == JsonValue.ValueType.STRING
 											? ((JsonString) serial.getParams().get(Y)).getString()
@@ -198,9 +237,9 @@ public class Query {
 			case AND:
 				if (serial.getParams().containsKey(X))
 					predicate = cb.and(
-							Query.<T, Boolean>parse(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt,
+							Query.<T, Boolean>parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt,
 									c).getValue1(),
-							Query.<T, Boolean>parse(cls, ((JsonString) serial.getParams().get(Y)).getString(), cb, rt,
+							Query.<T, Boolean>parseX(cls, ((JsonString) serial.getParams().get(Y)).getString(), cb, rt,
 									c).getValue1());
 				else
 					predicate = cb.and(serial.getRestrictions().stream().map(p -> parse(cls, p, cb, rt, c))
@@ -209,9 +248,9 @@ public class Query {
 			case OR:
 				if (serial.getParams().containsKey(X))
 					predicate = cb.or(
-							Query.<T, Boolean>parse(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt,
+							Query.<T, Boolean>parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt,
 									c).getValue1(),
-							Query.<T, Boolean>parse(cls, ((JsonString) serial.getParams().get(Y)).getString(), cb, rt,
+							Query.<T, Boolean>parseX(cls, ((JsonString) serial.getParams().get(Y)).getString(), cb, rt,
 									c).getValue1());
 				else
 					predicate = cb.or(serial.getRestrictions().stream().map(p -> parse(cls, p, cb, rt, c))
