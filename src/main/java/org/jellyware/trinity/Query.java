@@ -146,11 +146,13 @@ public class Query {
 		// pair
 		var value0 = field.getType();
 		if (Entity.Persistence.class.isAssignableFrom(value0))
-			try {
-				value0 = field.getType().getField("id").getType();
-			} catch (Exception e) {
-				throw Beef.uncheck(e);
-			}
+			value0 = getAllFields(value0, withModifier(Modifier.FINAL).negate(), withModifier(Modifier.STATIC).negate(),
+					withName("id"))
+							.stream().findAny()
+							.orElseThrow(() -> Beef.of(TrinityException.class)
+									.as(b -> b.when("Parsing expression").detail("Couldn't find suitable field: " + id))
+									.build())
+							.getType();
 		// transient
 		var t = field.getAnnotation(Transient.class);
 		var hmm = field.getName();
