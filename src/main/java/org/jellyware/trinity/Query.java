@@ -150,7 +150,7 @@ public class Query {
 					withName("id"))
 							.stream().findAny()
 							.orElseThrow(() -> Beef.of(TrinityException.class)
-									.as(b -> b.when("Parsing expression").detail("Couldn't find suitable field: " + id))
+									.as(b -> b.when("Parsing expression").detail("Couldn't find suitable field: id"))
 									.build())
 							.getType();
 		// transient
