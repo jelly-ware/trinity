@@ -1,10 +1,20 @@
 package org.jellyware.trinity;
 
+import static org.reflections8.ReflectionUtils.getAllFields;
+import static org.reflections8.ReflectionUtils.getAllMethods;
+import static org.reflections8.ReflectionUtils.withAnnotation;
+import static org.reflections8.ReflectionUtils.withModifier;
+import static org.reflections8.ReflectionUtils.withName;
+import static org.reflections8.ReflectionUtils.withParametersAssignableFrom;
+import static org.reflections8.ReflectionUtils.withReturnTypeAssignableTo;
+import static org.reflections8.ReflectionUtils.withTypeAssignableTo;
+
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,14 +34,13 @@ import javax.persistence.criteria.CommonAbstractCriteria;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.From;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Order;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Selection;
 
+import org.javatuples.Pair;
 import org.jellyware.beef.Beef;
 import org.jellyware.toolkit.Enumeration;
 import org.jellyware.toolkit.Json;
@@ -41,9 +49,6 @@ import org.jellyware.trinity.Entity.Persistence;
 import org.jellyware.trinity.ps.OrderBuilder;
 import org.jellyware.trinity.ps.PredicateBuilder;
 import org.jellyware.trinity.ps.QueryBuilder;
-import org.javatuples.Pair;
-
-import static org.reflections8.ReflectionUtils.*;
 
 public class Query {
 	public static final String X = "x";
@@ -128,7 +133,7 @@ public class Query {
 	 */
 	public static <T extends Entity.Persistence<? extends Serializable>, U> Pair<Class<?>, Expression<U>> parseX(
 			Class<T> cls, String expression, CriteriaBuilder cb, Root<T> rt, CommonAbstractCriteria c) {
-		var tokens = expression.split("\\.");
+		var tokens = new ArrayList<>(Arrays.asList(expression.split("\\.")));
 		// resolve nested field
 		Field field = null;
 		for (var token : tokens) {
@@ -145,7 +150,8 @@ public class Query {
 
 		// pair
 		var value0 = field.getType();
-		if (Entity.Persistence.class.isAssignableFrom(value0))
+		if (Entity.Persistence.class.isAssignableFrom(value0)) {
+			tokens.add("id");
 			value0 = getAllFields(value0, withModifier(Modifier.FINAL).negate(), withModifier(Modifier.STATIC).negate(),
 					withName("id"))
 							.stream().findAny()
@@ -153,6 +159,7 @@ public class Query {
 									.as(b -> b.when("Parsing expression").detail("Couldn't find suitable field: id"))
 									.build())
 							.getType();
+		}
 		// transient
 		var t = field.getAnnotation(Transient.class);
 		var hmm = field.getName();
@@ -175,11 +182,11 @@ public class Query {
 		}
 		// non-transient
 		Path<?> value1 = null;
-		for (int i = 0; i < tokens.length; i++) {
-			if (i == tokens.length - 1)
-				value1 = value1 == null ? rt.get(tokens[i]) : value1.get(tokens[i]);
+		for (int i = 0; i < tokens.size(); i++) {
+			if (i == tokens.size() - 1)
+				value1 = value1 == null ? rt.get(tokens.get(i)) : value1.get(tokens.get(i));
 			else
-				value1 = value1 == null ? rt.join(tokens[i]) : ((Root<?>) value1).join(tokens[i]);
+				value1 = value1 == null ? rt.join(tokens.get(i)) : ((Root<?>) value1).join(tokens.get(i));
 		}
 		return Pair.with(value0, (Expression<U>) value1);
 	}
