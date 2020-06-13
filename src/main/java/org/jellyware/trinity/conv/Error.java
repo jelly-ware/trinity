@@ -12,11 +12,15 @@ public class Error implements AttributeConverter<org.jellyware.beef.Error, Strin
 
 	@Override
 	public String convertToDatabaseColumn(org.jellyware.beef.Error attribute) {
+		if (attribute == null)
+			return null;
 		return jsonb.toJson(attribute);
 	}
 
 	@Override
 	public org.jellyware.beef.Error convertToEntityAttribute(String dbData) {
+		if (dbData == null)
+			return null;
 		return jsonb.fromJson(dbData, org.jellyware.beef.Error.class);
 	}
 }
