@@ -289,34 +289,6 @@ public interface Entity<K extends Serializable> {
 		}
 	}
 
-	public static interface Translator<T extends Entity.Model<K>, S extends Entity<K>, K extends Serializable> {
-		void serialize(T mdl, S ser);
-
-		void deserialize(S ser, T mdl);
-
-		@Qualifier
-		@Retention(RUNTIME)
-		@Target({ ElementType.TYPE, ElementType.PARAMETER })
-		public static @interface Translatable {
-			Class<? extends Entity.Model<? extends Serializable>> value();
-
-			public final static class Literal extends AnnotationLiteral<Translatable> implements Translatable {
-				private static final long serialVersionUID = 1L;
-				private final Class<? extends Entity.Model<? extends Serializable>> value;
-
-				public Literal(Class<? extends Entity.Model<? extends Serializable>> value) {
-					super();
-					this.value = value;
-				}
-
-				@Override
-				public Class<? extends Entity.Model<? extends Serializable>> value() {
-					return this.value;
-				}
-			}
-		}
-	}
-
 	public enum Lifecycle {
 		POST_PERSIST, POST_REMOVE, POST_UPDATE, PRE_PERSIST, PRE_REMOVE, PRE_UPDATE, POST_LOAD;
 
