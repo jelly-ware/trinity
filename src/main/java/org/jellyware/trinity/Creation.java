@@ -99,7 +99,7 @@ public interface Creation<K extends Serializable> {
 		@SuppressWarnings("unchecked")
 		default <U extends Model<K> & Discriminatory<V, K>> K id(Class<U> cls, String key) {
 			return find((Class<K>) ((ParameterizedType) this.getClass().getGenericInterfaces()[0])
-					.getActualTypeArguments()[0], cls, key).orElseThrow(() -> Beef.of(TrinityException.class).as(
+					.getActualTypeArguments()[1], cls, key).orElseThrow(() -> Beef.of(TrinityException.class).as(
 							b -> b.when("Fetching creational entity for " + cls).detail("Couldn't find key - " + key))
 							.build());
 		}
@@ -107,7 +107,7 @@ public interface Creation<K extends Serializable> {
 		@SuppressWarnings("unchecked")
 		default <U extends Model<K> & Discriminatory<V, K>> Stream<K> ids(Class<U> cls, String... keys) {
 			return select((Class<K>) ((ParameterizedType) this.getClass().getGenericInterfaces()[0])
-					.getActualTypeArguments()[0], cls, keys);
+					.getActualTypeArguments()[1], cls, keys);
 		}
 
 		<T, U extends Model<K> & Discriminatory<V, K>> Stream<T> select(Class<T> projection, Class<U> cls,
