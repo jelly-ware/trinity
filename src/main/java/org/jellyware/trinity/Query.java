@@ -265,6 +265,14 @@ public class Query {
 					predicate = cb.or(serial.getRestrictions().stream().map(p -> parse(cls, p, cb, rt, c))
 							.toArray(Predicate[]::new));
 				break;
+			case IS_NULL:
+				x = Query.parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
+				predicate = cb.isNull(x.getValue1());
+				break;
+			case IS_NOT_NULL:
+				x = Query.parseX(cls, ((JsonString) serial.getParams().get(X)).getString(), cb, rt, c);
+				predicate = cb.isNotNull(x.getValue1());
+				break;
 			default:
 				throw new RuntimeException();
 		}
@@ -343,7 +351,7 @@ public class Query {
 			}
 
 			public static enum Type {
-				EQUAL, LIKE, AND, OR;
+				EQUAL, LIKE, AND, OR, IS_NULL, IS_NOT_NULL;
 			}
 		}
 
