@@ -143,7 +143,7 @@ public interface Creation<K extends Serializable> {
 	@Qualifier
 	@Retention(RUNTIME)
 	@Target({ ElementType.TYPE, ElementType.PARAMETER })
-	public static @interface Beginning {
+	public static @interface Qualifier {
 	}
 
 	@Documented
