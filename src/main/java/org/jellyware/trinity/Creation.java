@@ -140,7 +140,7 @@ public interface Creation<K extends Serializable> {
 		}
 	}
 
-	@Qualifier
+	@javax.inject.Qualifier
 	@Retention(RUNTIME)
 	@Target({ ElementType.TYPE, ElementType.PARAMETER })
 	public static @interface Qualifier {
