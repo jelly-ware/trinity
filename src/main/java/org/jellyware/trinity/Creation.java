@@ -70,6 +70,8 @@ public interface Creation<K extends Serializable> {
 
 	Crud.Model<K> crud();
 
+	<T extends Entity.Model<K>> Discrimination<T, K> of(T discriminator);
+
 	public static interface Discrimination<V extends Entity.Model<K>, K extends Serializable> {
 		<U extends Entity.Model<K> & Discriminatory<V, K>> U create(U entity);
 
@@ -123,17 +125,9 @@ public interface Creation<K extends Serializable> {
 			return find(cls, cls, key);
 		}
 
-		Crud.Model<K> crud();
-
 		V discriminator();
 
 		Creation<K> creation();
-
-		<T extends Entity.Model<K>> Discrimination<T, K> of(T discriminator);
-
-		public static interface Creator<K extends Serializable> {
-			<T extends Entity.Model<K>> Discrimination<T, K> of(T discriminator);
-		}
 
 		public static interface Discriminatory<T extends Model<K>, K extends Serializable> extends Creatable {
 			void discriminate(T entity);
